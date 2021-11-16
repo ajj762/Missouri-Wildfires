@@ -1,0 +1,125 @@
+---
+title: "Missouri wildfire reports"
+output:
+  html_document:
+    df_print: paged
+---
+
+### **Methodology:**
+
+This is a first draft of an exploratory analysis of Missouri wildfire reporting data from 2002 to 2021.
+
+This data set was downloaded from the Missouri Department of Conservation's wildfire reporting at this link [<https://mdc12.mdc.mo.gov/Applications/MDCFireReporting/Home/FireReportSearch>]
+
+The data was downloaded by selecting a time range from Jan. 1, 2002 to Nov. x, 2021. All possible causes of wildfire were selected including arson, campfire, children, debris, equipment, fireworks, lightning, miscellaneous, not reported, powerline, railroad, smoking, structure and unknown. Data for prescribed and controlled fires is not included in this data set. 
+
+I'm not sure what the definitions are for some of the causes of fire. For example, the cause labeled "children" is vague. I plan to reach out to someone to clarify the definitions of these causes. 
+
+There are 1,393 NAs in the acres burned category, approximately 2% of the data. While these rows exist as a report, I'm not sure if this means no acres were burned or it wasn't reported. I believe the dataset still has sufficient information for analysis. 
+
+The county column is dirty. There 124 counties listed, including a Decatur, which is not a county in Missouri, and a category called "out of state". I know there must be other duplicates or errors since there are only 115 counties (including city of St. Louis) in Missouri. 
+
+Loading libraries.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+```
+
+Loading data and cleaning variable names.
+
+```{r}
+wildfires <- read_csv("data/mdc-wildfire-reporting-2002-2021.csv")
+
+wildfires <- wildfires %>% clean_names()
+```
+
+------------------------------------------------------------------------
+
+## **Integrity checks of the data:**
+
+What is the exact time range of the data?
+```{r}
+wildfires %>% summarise(range(discovered_date))
+```
+This comes back as 01/01/2003 to 12/31/2020 for some reason, but I know the time range includes data from 2002 and 2021. 
+
+How many different causes of wildfire are there?
+```{r}
+wildfires %>% count(cause)
+```
+There are 14 causes, including 8,064 rows for miscellaneous, 20,455 for unknown and 1,658 not reported.
+
+How many different counties? Which county has the most reports? 
+```{r}
+wildfires %>% count(county) %>%
+  arrange(desc(n))
+```
+
+The fewest reports?
+```{r}
+wildfires %>% count(county) %>%
+  arrange(n)
+```
+124 "counties" are listed. Camden county has the most reports over the time frame at 3,516. Decatur and Fulton had the fewest reports with 1 report each. Boone is in the bottom ten, with only 14 reports. Decatur is not a county in Missouri, but there is a township with the same name. 
+I also see an "Out of State" category on here. It has 26 reports. 
+
+How many different stations? Which station has the most reports?
+```{r}
+wildfires %>% count(station) %>%
+  arrange(desc(n))
+```
+There are 745 stations listed throughout this dataset. Looking at the names, they look dirty. Some are all uppercase and some are not. Butler County Fire Protection district has the most reports over the time period at 1,767.
+
+Checking for duplicate stations.
+```{r}
+wildfires %>% tolower(station)
+```
+
+
+Making a new column for just the year. What year had the most reports?
+```{r}
+wildfires <- wildfires %>% mutate(year = substr(discovered_date, 7, 10), .after = "discovered_date")
+
+wildfires %>% count(year) %>%
+  arrange(desc(n))
+```
+2012 had the most reports at 6,595 rows/reports.
+
+Are there NAs? How many?
+```{r}
+wildfires %>% filter(is.na(acres_burned)) %>%
+  summarise(count=n())
+```
+There are 1,393 NAs in the acres burned column. This is about 2% of the data. 
+
+What is the range for acres burned?
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>% 
+  summarise(range = range(acres_burned))
+```
+The range of the acres burned goes from -1 to 10,142.16 acres. 
+
+How many rows include -1 as the number of acres burned?
+```{r}
+wildfires %>% filter(acres_burned == -1)
+```
+Six rows list -1 acres burned. All from Fort Osage Fire Protection District in Jackson County in 2004. These occurred during January, February and March.
+------------------------------------------------------------------------
+
+### **Possible questions to ask during the analysis:**
+
+What county has the most acres burned overall? (2002 to 2021)
+
+What county has the most acres burned from 2020?
+
+What was the highest cause of wildfires overall? (2002 to 2021)
+
+What was the highest cause of wildfires in 2020?
+
+How has the number of acres burned for the state as a whole changed over time?
+
+How has the number of acres burned for each county changed over time?
+
+How has the most frequent cause of fire changed overtime for the state?
