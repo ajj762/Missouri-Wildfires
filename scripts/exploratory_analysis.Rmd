@@ -11,7 +11,7 @@ This is a first draft of an exploratory analysis of Missouri wildfire reporting 
 
 This data set was downloaded from the Missouri Department of Conservation's wildfire reporting at this link [<https://mdc12.mdc.mo.gov/Applications/MDCFireReporting/Home/FireReportSearch>]
 
-The data was downloaded by selecting a time range from Jan. 1, 2002 to Nov. x, 2021. All possible causes of wildfire were selected including arson, campfire, children, debris, equipment, fireworks, lightning, miscellaneous, not reported, powerline, railroad, smoking, structure and unknown. Data for prescribed and controlled fires is not included in this data set. 
+The data was downloaded by selecting a time range from Jan. 1, 2002 to Nov. 16, 2021. There are 69,745 rows of data and 7 variables including view, discovered date, county, station, cause, acres burned and the member who reported the wildfire. All possible causes of wildfire were selected including arson, campfire, children, debris, equipment, fireworks, lightning, miscellaneous, not reported, powerline, railroad, smoking, structure and unknown. Data for prescribed and controlled fires is not included in this data set. All counties were chosen for for the data downloaded.
 
 I'm not sure what the definitions are for some of the causes of fire. For example, the cause labeled "children" is vague. I plan to reach out to someone to clarify the definitions of these causes. 
 
@@ -30,7 +30,7 @@ library(lubridate)
 Loading data and cleaning variable names.
 
 ```{r}
-wildfires <- read_csv("data/mdc-wildfire-reporting-2002-2021.csv")
+wildfires <- read_csv("data/wildfire-reports-2002-2021.csv")
 
 wildfires <- wildfires %>% clean_names()
 ```
@@ -47,9 +47,10 @@ This comes back as 01/01/2003 to 12/31/2020 for some reason, but I know the time
 
 How many different causes of wildfire are there?
 ```{r}
-wildfires %>% count(cause)
+wildfires %>% count(cause) %>%
+  arrange(desc(n))
 ```
-There are 14 causes, including 8,064 rows for miscellaneous, 20,455 for unknown and 1,658 not reported.
+There are 14 causes, including 8,083 rows for miscellaneous, 20,543 for unknown and 1,663 not reported. Debris has the most at 28,067 reports.
 
 How many different counties? Which county has the most reports? 
 ```{r}
@@ -62,21 +63,29 @@ The fewest reports?
 wildfires %>% count(county) %>%
   arrange(n)
 ```
-124 "counties" are listed. Camden county has the most reports over the time frame at 3,516. Decatur and Fulton had the fewest reports with 1 report each. Boone is in the bottom ten, with only 14 reports. Decatur is not a county in Missouri, but there is a township with the same name. 
+124 "counties" are listed. Camden county has the most reports over the time frame at 3,529. Decatur and Fulton had the fewest reports with 1 report each. Boone is in the bottom ten, with only 14 reports. Decatur is not a county in Missouri, but there is a township with the same name. 
 I also see an "Out of State" category on here. It has 26 reports. 
 
-How many different stations? Which station has the most reports?
+Are there and counties listed as NA?
+```{r}
+wildfires %>% filter(is.na(county)) %>%
+  summarise(count = n())
+```
+There are 56 rows with the county listed as NA. 
+
+How many different stations? Which station has the most reports for the time period?
 ```{r}
 wildfires %>% count(station) %>%
   arrange(desc(n))
 ```
-There are 745 stations listed throughout this dataset. Looking at the names, they look dirty. Some are all uppercase and some are not. Butler County Fire Protection district has the most reports over the time period at 1,767.
+There are 745 stations listed throughout this dataset. Looking at the names, they look dirty. Some are all uppercase and some are not. Butler County Fire Protection district has the most reports over the time period at 1,771.
 
-Checking for duplicate stations.
+How many reports list the station as NA?
 ```{r}
-wildfires %>% tolower(station)
+wildfires %>% filter(is.na(station)) %>%
+  summarise(count = n())
 ```
-
+No stations are listed as NA. 
 
 Making a new column for just the year. What year had the most reports?
 ```{r}
@@ -92,7 +101,7 @@ Are there NAs? How many?
 wildfires %>% filter(is.na(acres_burned)) %>%
   summarise(count=n())
 ```
-There are 1,393 NAs in the acres burned column. This is about 2% of the data. 
+There are 1,410 NAs in the acres burned column. This is about 2% of the data. 
 
 What is the range for acres burned?
 ```{r}
@@ -106,20 +115,53 @@ How many rows include -1 as the number of acres burned?
 wildfires %>% filter(acres_burned == -1)
 ```
 Six rows list -1 acres burned. All from Fort Osage Fire Protection District in Jackson County in 2004. These occurred during January, February and March.
+
+What county has the most acres burned overall? (2002 to 2021)
+```{r}
+wildfires %>% group_by(county) %>%
+  summarise(total_acres = sum(acres_burned)) %>%
+  arrange(desc(total_acres))
+```
+Vernon county has the most acres burned with 12,116.34 acres. 
+
+How many NAs are in the member column?
+```{r}
+wildfires %>% filter(is.na(member)) %>%
+  summarise(count=n())
+```
+4,875 NAs in the member column.
+
+What person has filed the most reports?
+```{r}
+wildfires %>% filter(!is.na(member)) %>%
+  group_by(member) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+Bob Fredwell has filed the most at 260 reports. This code returns 15,086 rows. The top ten includes "none", "4200", "3000" and more, so it appears to be pretty dirty. 
+
 ------------------------------------------------------------------------
 
 ### **Possible questions to ask during the analysis:**
 
-What county has the most acres burned overall? (2002 to 2021)
-
-What county has the most acres burned from 2020?
+What county had the most acres burned in 2020?
 
 What was the highest cause of wildfires overall? (2002 to 2021)
 
 What was the highest cause of wildfires in 2020?
 
-How has the number of acres burned for the state as a whole changed over time?
+How did the highest cause of wildfires change over time for the state? Each county? Boone county?
 
-How has the number of acres burned for each county changed over time?
+How has the number of acres burned for the state as a whole changed over time? (by year)
 
-How has the most frequent cause of fire changed overtime for the state?
+How has the number of acres burned for each county changed over time? (by year)
+
+How has the number of acres burned for Boone county changed over time? (by year)
+
+What month in 2020 had the most reports?
+
+What month in 2020 had the most acres burned?
+
+How many fire stations are there for each county in this data?
+
+
