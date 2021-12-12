@@ -7,17 +7,19 @@ output:
 
 ### **Methodology:**
 
-This is an analysis of Missouri wildfire reporting data from 2002 to 2021 including data cleaning, an initial exploratory analysis and a full analysis with explanations of the process.
+This is an analysis of Missouri wildfire reporting data from 2002 to 2021 including data cleaning, an initial exploratory analysis with integrity checks and a full analysis with explanations of the process.
 
-This data set was downloaded from the Missouri Department of Conservation's wildfire reporting at this link [<https://mdc12.mdc.mo.gov/Applications/MDCFireReporting/Home/FireReportSearch>]
+This data set was downloaded from the Missouri Department of Conservation's wildfire reporting at this link [<https://mdc12.mdc.mo.gov/Applications/MDCFireReporting/Home/FireReportSearch>].
 
 The data was downloaded by selecting a time range from Jan. 1, 2002 to Nov. 16, 2021. There are 69,745 rows of data and 7 variables including view, discovered date, county, station, cause, acres burned and the member who reported the wildfire. All possible causes of wildfire were selected including arson, campfire, children, debris, equipment, fireworks, lightning, miscellaneous, not reported, powerline, railroad, smoking, structure and unknown. Data for prescribed and controlled fires is not included in this data set. All counties were chosen for for the data downloaded.
 
-I'm not sure what the definitions are for some of the causes of fire. For example, the cause labeled "children" is vague. I plan to reach out to someone to clarify the definitions of these causes.
+It is unclear what the definitions are for some of the causes of fire. For example, the cause labeled "children" is vague. I plan to reach out to someone to clarify the definitions of these causes.
 
 There are 1,393 NAs in the acres burned category, approximately 2% of the data. While these rows exist as a report, I'm not sure if this means no acres were burned or it wasn't reported. I believe the dataset still has sufficient information for analysis.
 
 The county column is dirty. There 124 counties listed, including a Decatur, which is not a county in Missouri, and a category called "out of state". I know there must be other duplicates or errors since there are only 115 counties (including city of St. Louis) in Missouri.
+
+This analysis focuses on Missouri as a whole and counties, acres burned, number of reports, and various time periods. The year 2020 is analyzed the most since it is the most recent full-year of data, but data from 2021 is included in analysis of trends over time. Because columns including the member who reported the wildfire and the name of the station are dirty, no conclusions will be drawn using these columns. Some exploratory analysis will be done using these columns.
 
 Loading libraries.
 
@@ -25,7 +27,6 @@ Loading libraries.
 library(tidyverse)
 library(janitor)
 library(lubridate)
-library(leaflet)
 ```
 
 Loading data and cleaning variable names.
@@ -73,7 +74,7 @@ wildfires %>% count(county) %>%
   arrange(n)
 ```
 
-124 "counties" are listed. Camden county has the most reports over the time frame at 3,529. Decatur and Fulton had the fewest reports with 1 report each. Boone is in the bottom ten, with only 14 reports. Decatur is not a county in Missouri, but there is a township with the same name. I also see an "Out of State" category on here. It has 26 reports.
+124 "counties" are listed. Camden county has the most reports over the time frame at 3,529. Decatur and Fulton had the fewest reports with 1 report each. Boone is in the bottom ten, with only 14 reports. Decatur and Fulton are not counties in Missouri, but there is a township and a city with the same names. There is also an "Out of State" category on here. It has 26 reports.
 
 Are there any counties listed as NA?
 
@@ -153,16 +154,6 @@ wildfires %>% filter(acres_burned == -1)
 
 Six rows list -1 acres burned. All from Fort Osage Fire Protection District in Jackson County in 2004. These occurred during January, February and March.
 
-What county has the most acres burned overall? (2002 to 2021)
-
-```{r}
-wildfires %>% group_by(county) %>%
-  summarise(total_acres = sum(acres_burned)) %>%
-  arrange(desc(total_acres))
-```
-
-Vernon county has the most acres burned with 12,116.34 acres.
-
 How many NAs are in the member column?
 
 ```{r}
@@ -195,20 +186,6 @@ Bob Fredwell has filed the most at 260 reports. The top ten includes "none", "42
 
 ------------------------------------------------------------------------
 
-### **Possible questions to ask during the analysis:**
-
-What was the highest cause of wildfires overall? (2002 to 2021)
-
-What was the highest cause of wildfires in 2020?
-
-How did the highest cause of wildfires change over time for the state? Each county? Boone county?
-
-How has the number of acres burned for each county changed over time? (by year)
-
-How many fire stations are there for each county in this data?
-
-------------------------------------------------------------------------
-
 ### Analysis
 
 #### *Acres burned*
@@ -222,6 +199,15 @@ wildfires %>% filter(!is.na(acres_burned)) %>%
 
 1,094,854 acres burned from 2002 to 2021.
 
+How many acres were burned overall for Boone County in the time period?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned) & county == "Boone") %>%
+  summarise(acres = sum(acres_burned))
+```
+
+From 2002 to Nov. 2021, only 77.01 acres have been burned in Boone County from wildfires.
+
 How many acres were burned for Missouri in 2020? 2021?
 
 ```{r}
@@ -233,6 +219,18 @@ wildfires %>% filter(!is.na(acres_burned) & year == "2021") %>%
 ```
 
 31,560.09 acres in 2020 and 30,563.77 acres in 2021.
+
+How many acres were burned in Boone County in 2020? 2021?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned) & year == "2020" & county == "Boone") %>%
+  summarise(total_acres = sum(acres_burned))
+
+wildfires %>% filter(!is.na(acres_burned) & year == "2021" & county == "Boone") %>%
+  summarise(total_acres = sum(acres_burned))
+```
+
+In 2020, there were zero acres burned in Boone County. In 2021, there have been 7.93 acres burned as of Nov. 15.
 
 What county had the most acres burned overall?
 
@@ -265,7 +263,62 @@ wildfires %>% filter(!is.na(acres_burned) & year == "2021") %>%
 
 In 2021, Camden County had the most acres burned at 3,655.68 acres.
 
-Creating a new table showing the acres burned from 2002 to 2021 for Missouri by year. Plotting on a bar chart.
+What year did the most acres burn in Missouri?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>%
+  group_by(year) %>%
+  summarise(acres = sum(acres_burned)) %>%
+  arrange(desc(acres))
+```
+
+The highest number of acres burned was in 2012 with 151,070.74 acres. The second highest was 2014 with 97,161.6 acres.
+
+What month overall has had the highest number of acres burned?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>%
+  group_by(month) %>%
+  summarise(acres_burned = sum(acres_burned)) %>%
+  arrange(desc(acres_burned))
+```
+
+March 2014 was the month with the highest number of acres burned in the time period at 53,152.44 acres burned.
+
+In March 2014, what county had the highest number of acres burned?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned) & month == "2014-03") %>%
+  group_by(county) %>%
+  summarise(acres = sum(acres_burned)) %>%
+  arrange(desc(acres))
+```
+
+Camden County has the most acres burned in March 2014 at 5,465.25 acres.
+
+What day did the most acres burn in Missouri in the time period?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>%
+  group_by(new_date) %>%
+  summarise(acres = sum(acres_burned)) %>%
+  arrange(desc(acres))
+```
+March 6, 2012 had the highest number of acres burned at 24,683.34 acres. 
+
+What county had the highest number of acres burned on March 6, 2012?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned) & new_date == "2012-03-06") %>%
+  group_by(county) %>%
+  summarise(sum = sum(acres_burned)) %>%
+  arrange(desc(sum))
+```
+Dallas County had the highest on March 6, 2012 at 7,666 acres. The second highest is Washington county at 5,466.6 acres burned. 
+
+How has the number of acres burned change over time?
+
+Creating a new table showing the acres burned from 2002 to 2021 for Missouri by year. Plotting on a line chart.
 
 ```{r}
 acres_mo_year <- wildfires %>% filter(!is.na(acres_burned)) %>%
@@ -273,10 +326,12 @@ acres_mo_year <- wildfires %>% filter(!is.na(acres_burned)) %>%
   summarise(total_acres = sum(acres_burned))
 
 ggplot(data=acres_mo_year, aes(x=year, y=total_acres, group=1, fill="red")) +
-  geom_col() 
+  geom_line() 
 ```
 
-Creating a new table showing the acres burned from 2002 to 2021 for Missouri by month. Plotting on a line chart. Any notable trends?
+While the number of acres burned peaked in 2012 for the time period, acres burned for the past five years is possibly trending downward.
+
+Looking at acres burned in Missouri by month. Creating a new table showing the acres burned from 2002 to 2021 for Missouri by month. Plotting on a line chart. Any notable trends?
 
 ```{r}
 acres_mo_month <- wildfires %>% filter(!is.na(acres_burned)) %>%
@@ -287,11 +342,15 @@ ggplot(data=acres_mo_month, aes(x=month, y=monthly_acres, group=1)) +
   geom_line()
 ```
 
-Missouri acres burned by year over the time period shows no notable trend except the number of acres burned appears to be slightly lower in the past seven years.
-
-I plotted Missouri acres burned by month over the time period because the bar chart was hard to read. It doesn't show a consistent trend, but it looks like "seasons" exist. The data fluctuates frequently. The peaks also appear to be lower in the previous seven years.
+It doesn't show a consistent trend, but it looks like "seasons" exist. The data fluctuates frequently. The peaks also appear to be trending downward in the past 5-7 years, but going back up in 2020-2021.
 
 A naturalist at the Runge Conservation Center explained that there has been a decrease in wildfires in Missouri over time, so the data from the last years supports that. Having more historical data about wildfires would help confirm the claim and see a broader trend.
+
+Writing a csv of acres burned in Missouri by month to create a chart in Datawrapper.
+
+```{r}
+write_csv(acres_mo_month, "data/acres-mo-month.csv", na="")
+```
 
 Creating a new table showing the acres burned in Boone County from 2002 to 2021 by year. Ploting on a line chart. Any notable trends?
 
@@ -315,18 +374,18 @@ ggplot(data=acres_boone_month, aes(x=month, y=monthly_acres, group=1)) +
   geom_line()
 ```
 
-Boone County is either missing data or there are not many acres burned. Only 9 months out of the reported time period have listed any acres burned. This is definitely worth looking into and checking with an expert on the topic. Boone isn't as rural as most other counties in Missouri, so it may just not have many large wildfires. I'll look into the number of reports in the next section of the analysis.
+Boone County has not had reports of very many acres burned. Only 9 months out of the reported time period have listed any acres burned. This is definitely worth looking into and checking with an expert on the topic. Boone isn't as rural as most other counties in Missouri, so it may just not have many large wildfires. I'll look into the number of reports in the next section of the analysis.
 
-What month in 2020 had the most acres burned in Missouri?
+In March 2014, what county had the highest number of acres burned?
 
 ```{r}
-wildfires %>% filter(!is.na(acres_burned) & year == "2020") %>%
-  group_by(month) %>%
-  summarise(acres_burned = sum(acres_burned)) %>%
-  arrange(desc(acres_burned))
+wildfires %>% filter(!is.na(acres_burned) & month == "2014-03") %>%
+  group_by(county) %>%
+  summarise(acres = sum(acres_burned)) %>%
+  arrange(desc(acres))
 ```
 
-November was the month with the highest number of acres burned due to wildfires in 2020. This is probably because of 'wildfire season' typically being in the fall in Missouri.
+Camden County has the most acres burned in March 2014 at 5,465.25 acres.
 
 How has the number of acres burned for each county changed over time? (by year)
 
@@ -343,51 +402,28 @@ ggplot(data=acres_by_county, aes(x=year, y=sum, group=county, color=county)) +
   geom_line()
 ```
 
-This did not work. In theory I felt like it should work, but it didn't and that's ok. 
+I tried to make a line chart with the over 100 counties in the data set to see if there were an anomalies in trends for each county. I couldn't get the ggplot to work in R but wanted to keep the code here for feedback.
 
-Making a heat map of acres burned in 2020 by county.
+How do counties differ on acres burned in 2020? Writing a new csv file to make a heat map of acres burned in Missouri in 2020 by county using Datawrapper.
 
 ```{r}
 acres_county_2020 <- wildfires %>% filter(!is.na(acres_burned) & year == "2020") %>%
   group_by(county) %>%
   summarise(sum = sum(acres_burned))
 
-acres_county_2020 <- acres_county_2020 %>% mutate(county = tolower(county))
-
-map2 <- map %>% group_by(subregion) %>%
-  summarise(count = n())
-
-acres_county_2020 <- acres_county_2020 %>% left_join(map2, by = c("county"="subregion")) %>%
-  select(county, sum)
-
-map <- map_data("county") %>%
-  filter(region == "missouri")
-
-ggplot(acres_county_2020, aes(fill=sum)) +
-  geom_map(aes(map_id=county), map = map) +
-  expand_limits(x=map$long, y=map$lat)
-
 write_csv(acres_county_2020, "data/mo_acres_burned_county_2020.csv", na="")
-
-
-
-
-
-
 ```
-
-
 
 #### *Number of reports*
 
-How many fires were reported in Missouri in 2020? 
+How many fires were reported in Missouri in 2020?
 
 ```{r}
 wildfires %>% filter(year == "2020") %>%
   summarise(count = n())
 ```
-1,813 fires reported in 2020 in Missouri.
 
+1,813 fires reported in 2020 in Missouri.
 
 How many fires were reported in Boone County in 2020?
 
@@ -395,7 +431,8 @@ How many fires were reported in Boone County in 2020?
 wildfires %>% filter(county == "Boone" & year == "2020") %>%
   summarise(count = n())
 ```
-No fires were reported in Boone County in 2020. 
+
+No fires were reported in Boone County in 2020.
 
 How many fires were reported in Boone County over the time period?
 
@@ -403,10 +440,10 @@ How many fires were reported in Boone County over the time period?
 wildfires %>% filter(county == "Boone") %>%
   summarise(count = n())
 ```
-14 fires were reported in Boone County in the time period, this isn't a lot. Previously, I looked at total acres burned for the time period. Given only 14 wildfires were reported for 20 years, this makes sense. 
 
-How did the number of wildfires reported per year in Missouri change over time?
-Creating a bar chart showing number of fires reported in Missouri by year.
+14 fires were reported in Boone County in the time period, this isn't a lot. Previously, I looked at total acres burned for the time period for Boone, and it was 77.01. Given only 14 wildfires were reported for 20 years, this makes sense.
+
+How did the number of wildfires reported per year in Missouri change over time? Creating a line chart showing number of fires reported in Missouri by year.
 
 ```{r}
 reports_mo_year <- wildfires %>% group_by(year) %>%
@@ -416,6 +453,7 @@ ggplot(data=reports_mo_year, aes(x=year, y=count, group=1)) +
   geom_line()
 ```
 
+Looking at the trend by year is interesting because it looks like the number of reports has been trending downward for the past 5 or so years.
 
 How did the number of fires reported in Boone County change over time? Creating a line chart showing fires reported by year over time.
 
@@ -428,9 +466,9 @@ ggplot(data=reports_boone_year, aes(x=year, y=count, group=1)) +
   geom_line()
 ```
 
+I plotted this just to check it out, but as found previously with acres burned, Boone County simply doesn't have many wildfires.
 
-How did the number of fires per month in Missouri change over time? 
-Creating a bar chart showing number of fires reported in Missouri by month.
+How did the number of fires per month in Missouri change over time? Creating a bar chart showing number of fires reported in Missouri by month.
 
 ```{r}
 reports_mo_month <- wildfires %>% group_by(month) %>%
@@ -440,9 +478,15 @@ ggplot(data=reports_mo_month, aes(x=month, y=count, group=1)) +
   geom_line()
 ```
 
+Plotting the reports in Missouri by month really shows the fluctuating months. This chart appears to be similar to the number of acres reported.
 
-How did the number of fires per month reported in Boone County change over time?
-Creating a line chart showing fires reported by month over time.
+Writing a csv of reports in Missouri by month to create a chart in Datawrapper
+
+```{r}
+write_csv(reports_mo_month, "data/mo-reports-month.csv", na="")
+```
+
+How did the number of fires per month reported in Boone County change over time? Creating a line chart showing fires reported by month over time.
 
 ```{r}
 reports_boone_month <- wildfires %>% filter(county == "Boone") %>% 
@@ -453,19 +497,155 @@ ggplot(data=reports_boone_month, aes(x=month, y=count, group=1)) +
   geom_line()
 ```
 
+The same as before, Boone has has a little amount of reports. Although, Boone had 5 reports in January of 2014. There was a spike in wildfire reports in early 2014 for the state as well.
+
+Writing a new csv file to make a heat map of acres burned Missouri in 2020 by county using Datawrapper.
+
+```{r}
+reports_county_2020 <- wildfires %>% filter(year == "2020") %>%
+  group_by(county) %>%
+  summarise(reports = n())
+
+write_csv(reports_county_2020, "data/report-count-by-county-2020.csv", na="")
+```
 
 #### *Wildfire causes*
 
 What was the highest cause of wildfires in Missouri in 2020? 2021?
 
 ```{r}
+wildfires %>% filter(year == "2020") %>%
+  group_by(cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+
+```{r}
+wildfires %>% filter(year == "2021") %>%
+  group_by(cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+
+In both 2020 and 2021 the cause of wildfire with the most reports was the category unknown. In 2020, there were 692 unknown reports and in 2021 there were 543 unknown reports. The second highest cause in 2020 and 2021 was debris.
+
+What was the highest cause of wildfires in Boone County in 2021?
+
+```{r}
+wildfires %>% filter(county == "Boone" & year == "2021") %>%
+  group_by(cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+
+There were 2 reports of debris in 2021, making it the highest of 4 total reports. No fires were reported in 2020, so there is no highest cause.
+
+What cause and which county had the most reports in the time period?
+
+```{r}
+wildfires %>% group_by(county, cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+
+Camden County had the most reports filtered by cause. The cause was unknown at 1,340 reports. The second highest was Newton County with 1,330 reports of wildfires caused by debris. The third highest was Camden again with 1,192 reports caused by debris.
+
+What is the most reported cause of wildfire for each county over the time period?
+
+```{r}
+county_causes <- wildfires %>% group_by(county, cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+county_causes %>% summarise(max(count))
+```
+
+```{r}
+wildfires %>% filter(county == "Clinton") %>%
+  group_by(cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+wildfires %>% filter(county == "Barry") %>%
+  group_by(cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+wildfires %>% filter(county == "Vernon") %>%
+  group_by(cause) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
 
 ```
 
+How has the most reported cause of wildfire changed over time in Missouri?
 
-What was the highest cause of wildfires in Boone County in 2020? 2021?
+```{r}
+wildfires %>% filter()
+```
 
-How 
+What cause of wildfire is responsible for the most acres burned over the time period in Missouri?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>%
+  group_by(cause) %>%
+  summarise(sum = sum(acres_burned)) %>%
+  arrange(desc(sum))
+```
+
+Debris caused the most acres burned over the time period at 338,130.94 acres burned over the 20-year time period.
+
+What cause of wildfire is responsible for the most acres burned in 2020 in Missouri?
+
+```{r}
+cause_acres <- wildfires %>% filter(!is.na(acres_burned) & year == "2020") %>%
+  group_by(cause) %>%
+  summarise(sum = sum(acres_burned)) %>%
+  arrange(desc(sum))
+```
+
+However, the cause that burned the most acres in 2020 was unknown at 18,606 acres. 
+
+Writing a csv of acres burned in 2020 for each wildfire cause.
+
+```{r}
+write_csv(cause_acres, "data/cause-acres-mo-2020.csv", na="")
+```
+
+
+#### *Members and stations*
+
+What station has reported the most acres burned?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>%
+  group_by(station) %>%
+  summarise(acres = sum(acres_burned)) %>%
+  arrange(desc(acres))
+```
+Lebanon forestry has reported the most acres burned in the time period at 54,660.37 acres.
+
+What member had reported the most acres burned?
+
+```{r}
+wildfires %>% filter(!is.na(acres_burned)) %>%
+  group_by(member) %>%
+  summarise(acres = sum(acres_burned)) %>%
+  arrange(desc(acres))
+```
+The most acres burned comes from members listed as NA, so the highest listed is LaVal, reporting 13,423.5 acres.
+
+Where is LaVal from?
+
+```{r}
+wildfires %>% filter(member == "LaVal")
+```
+LaVal is from Lebanon Forestry, also the station with the highest reported acres burned in the time period.
+
+
+#### *Summary and graphics*
+
+
 
 
 
