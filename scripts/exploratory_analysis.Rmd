@@ -39,11 +39,13 @@ wildfires <- wildfires %>% clean_names()
 
 ## **Integrity checks of the data:**
 
-What is the exact time range of the data?
+Converted date column to date format. What is the exact time range of the data?
 ```{r}
-wildfires %>% summarise(range(discovered_date))
+wildfires <- wildfires %>% mutate(new_date = as.Date(discovered_date, "%m/%d/%Y"), .after="discovered_date")
+
+wildfires %>% summarise(range(new_date))
 ```
-This comes back as 01/01/2003 to 12/31/2020 for some reason, but I know the time range includes data from 2002 and 2021. 
+The range of the data is Jan. 9, 2002 to Nov. 15, 2021.
 
 How many different causes of wildfire are there?
 ```{r}
