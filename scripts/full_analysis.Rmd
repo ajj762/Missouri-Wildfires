@@ -103,12 +103,10 @@ wildfires %>% filter(is.na(station)) %>%
 
 No stations are listed as NA.
 
-Made a new column for just the year. What year had the most reports?
+Making a new column for just the year. What year had the most reports?
 
 ```{r}
 wildfires <- wildfires %>% mutate(year = substr(discovered_date, 7, 10), .after = "discovered_date")
-
-wildfires %>% mutate(year = as.Date())
 
 wildfires %>% count(year) %>%
   arrange(desc(n))
