@@ -14,4 +14,4 @@ Wildfire reports are categorized by county. However, there are 124 counties list
 
 This analysis focuses on Missouri as a whole and counties, acres burned, number of reports, and various time periods. The year 2020 is analyzed the most since it is the most recent full-year of data, but data from 2021 is included in analysis of trends over time. Because columns including the member who reported the wildfire and the name of the station are dirty, no conclusions will be drawn using these columns. Some exploratory analysis will be done using these columns.
 
-The full analysis is 
+The full analysis is wildfire_analysis.Rmd
